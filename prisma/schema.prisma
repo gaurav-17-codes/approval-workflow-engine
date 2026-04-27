@@ -1,13 +1,77 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// prisma/schema.prisma
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────
+
+enum Role {
+  STAFF
+  HOD
+  PRINCIPAL
+  ADMIN
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum StepStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ─── Models ──────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(STAFF)
+  createdAt DateTime @default(now())
+
+  approvalRequests ApprovalRequest[] @relation("Requester")
+  approvalSteps    ApprovalStep[]    @relation("Approver")
+}
+
+model ApprovalRequest {
+  id          String        @id @default(cuid())
+  title       String
+  description String        @db.Text
+  status      RequestStatus @default(PENDING)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  requesterId String
+  requester   User   @relation("Requester", fields: [requesterId], references: [id])
+
+  steps ApprovalStep[]
+}
+
+model ApprovalStep {
+  id         String     @id @default(cuid())
+  stepNumber Int
+  role       Role
+  status     StepStatus @default(PENDING)
+  comments   String?
+  decidedAt  DateTime?
+  createdAt  DateTime   @default(now())
+
+  requestId String
+  request   ApprovalRequest @relation(fields: [requestId], references: [id])
+
+  approverId String?
+  approver   User?   @relation("Approver", fields: [approverId], references: [id])
+
+  @@unique([requestId, stepNumber])
 }
