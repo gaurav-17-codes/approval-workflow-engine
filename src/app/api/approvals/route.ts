@@ -2,7 +2,8 @@ import { NextRequest } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { sendMail, emailTemplates } from "@/lib/mail"
+// import { sendMail, emailTemplates } from "@/lib/mail"
+import { sendNotificationEmail } from "@/lib/mail";
 import { successResponse, errorResponse } from "@/lib/response"
 import { Category, Priority, RequestStatus, Role } from "@prisma/client"
 import { WORKFLOW_STEPS } from "@/lib/constants"
@@ -74,10 +75,16 @@ export async function POST(req: NextRequest) {
     // Notify first approver (HOD) by email
     const hod = await prisma.user.findFirst({ where: { role: Role.HOD } })
     if (hod) {
-      const template = emailTemplates.newRequest(user.name, title.trim(), approvalRequest!.id)
-      sendMail({ to: hod.email, ...template }).catch(err => 
-        console.error("Failed to send workflow email:", err)
-      )
+      sendNotificationEmail({
+        to: hod.email,
+        subject: `🚨 Action Required: New Request from ${user.name}`,
+        html: `
+          <h3>New Request Submitted</h3>
+          <p><b>Title:</b> ${approvalRequest!.title}</p>
+          <p><b>Category:</b> ${approvalRequest!.category}</p>
+          <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/approvals/${approvalRequest!.id}">Click here to review</a>
+        `
+      });
     }
 
     return successResponse(approvalRequest, "Approval request created successfully.", 201)

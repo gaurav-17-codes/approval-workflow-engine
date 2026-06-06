@@ -150,98 +150,265 @@
 
 
 
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { redirect } from "next/navigation";
-import prisma from "@/lib/prisma";
-import Link from "next/link";
+// import { getServerSession } from "next-auth";
+// import { authOptions } from "@/lib/auth";
+// import { redirect } from "next/navigation";
+// import prisma from "@/lib/prisma";
+// import Link from "next/link";
 
-//new
-import { Role } from "@prisma/client";
-
-
-export default async function ApprovalsPage({ searchParams }: { searchParams: { status?: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) redirect("/login");
-  // const user = session.user as any;
-
-  //new
-  const user = session.user as { id: string; role: Role; name: string };
+// //new
+// import { Role } from "@prisma/client";
 
 
+// export default async function ApprovalsPage({ searchParams }: { searchParams: { status?: string } }) {
+//   const session = await getServerSession(authOptions);
+//   if (!session?.user) redirect("/login");
+//   // const user = session.user as any;
+
+//   //new
+//   const user = session.user as { id: string; role: Role; name: string };
 
 
-  // 1. Build the filter query based on URL params
-  const filterStatus = searchParams.status ? searchParams.status.toUpperCase() : undefined;
+
+
+//   // 1. Build the filter query based on URL params
+//   const filterStatus = searchParams.status ? searchParams.status.toUpperCase() : undefined;
   
-  const queryWhere: any = {};
-  if (user.role === "TEACHER") queryWhere.submittedById = user.id;
-  if (filterStatus && filterStatus !== "ALL") queryWhere.status = filterStatus;
+//   const queryWhere: any = {};
+//   if (user.role === "TEACHER") queryWhere.submittedById = user.id;
+//   if (filterStatus && filterStatus !== "ALL") queryWhere.status = filterStatus;
 
-  // 2. Fetch Data
-  const requests = await prisma.approvalRequest.findMany({
-    where: queryWhere,
-    include: { submittedBy: { select: { name: true } }, steps: { orderBy: { stepOrder: "asc" } } },
-    orderBy: { createdAt: "desc" },
+//   // 2. Fetch Data
+//   const requests = await prisma.approvalRequest.findMany({
+//     where: queryWhere,
+//     include: { submittedBy: { select: { name: true } }, steps: { orderBy: { stepOrder: "asc" } } },
+//     orderBy: { createdAt: "desc" },
+//   });
+
+//   return (
+//     <div className="space-y-6">
+//       {/* Filter Tabs */}
+//       <div className="flex gap-2 pb-4 border-b border-white/10">
+//         {["ALL", "PENDING", "APPROVED", "REJECTED"].map((status) => (
+//           <Link
+//             key={status}
+//             href={`/approvals${status === "ALL" ? "" : `?status=${status}`}`}
+//             className={`px-4 py-2 text-sm rounded-lg border transition-colors ${
+//               (searchParams.status?.toUpperCase() === status) || (!searchParams.status && status === "ALL")
+//                 ? "bg-white/10 border-white/20 text-white" 
+//                 : "border-transparent text-gray-400 hover:bg-white/5 hover:text-white"
+//             }`}
+//           >
+//             {status}
+//           </Link>
+//         ))}
+//       </div>
+
+//       {/* Table */}
+//       <div className="bg-[#111] border border-white/10 rounded-xl overflow-hidden">
+//         <table className="w-full text-left text-sm text-gray-300">
+//           <thead className="bg-white/[0.02] border-b border-white/10 text-xs uppercase text-gray-400">
+//             <tr>
+//               <th className="px-6 py-4 font-medium">Title</th>
+//               <th className="px-6 py-4 font-medium">Created Date</th>
+//               <th className="px-6 py-4 font-medium">Status</th>
+//             </tr>
+//           </thead>
+//           <tbody className="divide-y divide-white/5">
+//             {requests.length === 0 ? (
+//               <tr><td colSpan={3} className="px-6 py-8 text-center text-gray-500">No requests found.</td></tr>
+//             ) : (
+//               requests.map((req) => (
+//                 <tr key={req.id} className="hover:bg-white/[0.02] transition-colors">
+//                   <td className="px-6 py-4">
+//                     <Link href={`/approvals/${req.id}`} className="text-blue-400 hover:underline font-medium">
+//                       {req.title}
+//                     </Link>
+//                   </td>
+//                   <td className="px-6 py-4 text-gray-400">
+//                     {new Date(req.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+//                   </td>
+//                   <td className="px-6 py-4">
+//                     <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${
+//                       req.status === 'APPROVED' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+//                       req.status === 'REJECTED' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+//                       'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+//                     }`}>
+//                       {req.status}
+//                     </span>
+//                   </td>
+//                 </tr>
+//               ))
+//             )}
+//           </tbody>
+//         </table>
+//       </div>
+//     </div>
+//   );
+// }
+
+
+
+
+
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { PriorityBadge } from "@/components/ui/PriorityBadge";
+
+type RequestItem = {
+  id: string;
+  title: string;
+  category: string;
+  priority: string;
+  status: string;
+  createdAt: string;
+  submittedBy: { name: string; role: string };
+};
+
+export default function ApprovalsListPage() {
+  const { data: session } = useSession();
+  const [requests, setRequests] = useState<RequestItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // --- FILTER STATES ---
+  const [filterStatus, setFilterStatus] = useState("ALL");
+  const [filterPriority, setFilterPriority] = useState("ALL");
+  const [filterCategory, setFilterCategory] = useState("ALL");
+
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
+  async function fetchRequests() {
+    try {
+      // Assuming you have an API route that fetches requests for the logged-in user
+      const res = await fetch("/api/approvals"); 
+      const json = await res.json();
+      if (json.success) {
+        setRequests(json.data);
+      }
+    } catch (error) {
+      console.error("Failed to load requests", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // --- THE FILTERING ENGINE ---
+  // This runs instantly every time a user changes a dropdown!
+  const filteredRequests = requests.filter((req) => {
+    const matchStatus = filterStatus === "ALL" || req.status === filterStatus;
+    const matchPriority = filterPriority === "ALL" || req.priority === filterPriority;
+    const matchCategory = filterCategory === "ALL" || req.category === filterCategory;
+    
+    return matchStatus && matchPriority && matchCategory;
   });
+
+  if (loading) {
+    return <div className="text-gray-400 flex justify-center items-center h-64">Loading requests...</div>;
+  }
 
   return (
     <div className="space-y-6">
-      {/* Filter Tabs */}
-      <div className="flex gap-2 pb-4 border-b border-white/10">
-        {["ALL", "PENDING", "APPROVED", "REJECTED"].map((status) => (
-          <Link
-            key={status}
-            href={`/approvals${status === "ALL" ? "" : `?status=${status}`}`}
-            className={`px-4 py-2 text-sm rounded-lg border transition-colors ${
-              (searchParams.status?.toUpperCase() === status) || (!searchParams.status && status === "ALL")
-                ? "bg-white/10 border-white/20 text-white" 
-                : "border-transparent text-gray-400 hover:bg-white/5 hover:text-white"
-            }`}
+      
+      {/* 1. THE FILTER BAR (Glassmorphism UI) */}
+      <div className="bg-transparent border border-[#673AB7] rounded-xl p-4 backdrop-blur-md flex flex-wrap gap-4 items-end shadow-lg shadow-[#673AB7]/5">
+        
+        <div className="flex-1 min-w-[150px]">
+          <label className="block text-xs font-medium text-gray-400 mb-1.5">Status</label>
+          <select 
+            value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
+            className="w-full bg-[#111] border border-white/10 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-[#673AB7] transition-colors appearance-none cursor-pointer"
           >
-            {status}
-          </Link>
-        ))}
+            <option value="ALL">All Statuses</option>
+            <option value="PENDING">Pending</option>
+            <option value="APPROVED">Approved</option>
+            <option value="REJECTED">Rejected</option>
+          </select>
+        </div>
+
+        <div className="flex-1 min-w-[150px]">
+          <label className="block text-xs font-medium text-gray-400 mb-1.5">Priority</label>
+          <select 
+            value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)}
+            className="w-full bg-[#111] border border-white/10 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-[#673AB7] transition-colors appearance-none cursor-pointer"
+          >
+            <option value="ALL">All Priorities</option>
+            <option value="URGENT">Urgent 🚨</option>
+            <option value="HIGH">High</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="LOW">Low</option>
+          </select>
+        </div>
+
+        <div className="flex-1 min-w-[150px]">
+          <label className="block text-xs font-medium text-gray-400 mb-1.5">Category</label>
+          <select 
+            value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}
+            className="w-full bg-[#111] border border-white/10 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-[#673AB7] transition-colors appearance-none cursor-pointer"
+          >
+            <option value="ALL">All Categories</option>
+            <option value="LEAVE">Leave</option>
+            <option value="EXPENSE">Expense</option>
+            <option value="ACADEMIC">Academic</option>
+            <option value="OTHER">Other</option>
+          </select>
+        </div>
+
+        {/* Clear Filters Button (Only shows if a filter is active) */}
+        {(filterStatus !== "ALL" || filterPriority !== "ALL" || filterCategory !== "ALL") && (
+          <button 
+            onClick={() => { setFilterStatus("ALL"); setFilterPriority("ALL"); setFilterCategory("ALL"); }}
+            className="px-4 py-2 text-sm text-red-400 bg-red-500/10 hover:bg-red-500/20 rounded-lg transition-colors border border-red-500/20 h-[38px]"
+          >
+            Clear Filters
+          </button>
+        )}
       </div>
 
-      {/* Table */}
-      <div className="bg-[#111] border border-white/10 rounded-xl overflow-hidden">
-        <table className="w-full text-left text-sm text-gray-300">
-          <thead className="bg-white/[0.02] border-b border-white/10 text-xs uppercase text-gray-400">
-            <tr>
-              <th className="px-6 py-4 font-medium">Title</th>
-              <th className="px-6 py-4 font-medium">Created Date</th>
-              <th className="px-6 py-4 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/5">
-            {requests.length === 0 ? (
-              <tr><td colSpan={3} className="px-6 py-8 text-center text-gray-500">No requests found.</td></tr>
-            ) : (
-              requests.map((req) => (
-                <tr key={req.id} className="hover:bg-white/[0.02] transition-colors">
+      {/* 2. THE DATA TABLE */}
+      <div className="bg-transparent border border-[#673AB7]/50 rounded-xl backdrop-blur-md overflow-hidden">
+        {filteredRequests.length === 0 ? (
+          <div className="p-12 text-center text-gray-400">
+            <p>No requests found matching your filters.</p>
+          </div>
+        ) : (
+          <table className="w-full text-left text-sm text-gray-300">
+            <thead className="bg-white/5 border-b border-[#673AB7]/30 text-gray-400">
+              <tr>
+                <th className="px-6 py-4 font-medium">Title & Submitter</th>
+                <th className="px-6 py-4 font-medium">Priority</th>
+                <th className="px-6 py-4 font-medium">Category</th>
+                <th className="px-6 py-4 font-medium">Date</th>
+                <th className="px-6 py-4 font-medium text-right">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {filteredRequests.map((req) => (
+                <tr key={req.id} className="hover:bg-white/5 transition-colors group">
                   <td className="px-6 py-4">
-                    <Link href={`/approvals/${req.id}`} className="text-blue-400 hover:underline font-medium">
-                      {req.title}
+                    <Link href={`/approvals/${req.id}`} className="block">
+                      <div className="font-medium text-white group-hover:text-blue-400 transition-colors">
+                        {req.title}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {req.submittedBy.name} • {req.submittedBy.role}
+                      </div>
                     </Link>
                   </td>
-                  <td className="px-6 py-4 text-gray-400">
-                    {new Date(req.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${
-                      req.status === 'APPROVED' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
-                      req.status === 'REJECTED' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
-                      'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
-                    }`}>
-                      {req.status}
-                    </span>
-                  </td>
+                  <td className="px-6 py-4"><PriorityBadge priority={req.priority} /></td>
+                  <td className="px-6 py-4">{req.category}</td>
+                  <td className="px-6 py-4 text-gray-400">{new Date(req.createdAt).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 text-right"><StatusBadge status={req.status} /></td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );

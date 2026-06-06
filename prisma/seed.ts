@@ -105,7 +105,7 @@ async function main() {
   console.log("Seeding database...")
 
 const users = [
-    { name: "YASH",             email: "teacher@school.com",   role: Role.TEACHER,    password: "teacher123" },
+    { name: "Gaurav",             email: "teacher@school.com",   role: Role.TEACHER,    password: "teacher123" },
     { name: "Bob HOD",          email: "hod@school.com",       role: Role.HOD,        password: "hod123" },
     { name: "Carol Principal",  email: "principal@school.com", role: Role.PRINCIPAL,  password: "principal123" },
     { name: "Dave Admin",       email: "admin@school.com",     role: Role.ADMIN,      password: "admin123" },

@@ -4,7 +4,11 @@ import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
 
-export default function ApprovalsLayout({ children }: { children: React.ReactNode }) {
+export default function ApprovalsLayout({ 
+  children,
+ }: { 
+  children: React.ReactNode
+ }) {
   const pathname = usePathname();
   const { data: session } = useSession(); // Fetch logged-in user details
 
@@ -20,9 +24,25 @@ export default function ApprovalsLayout({ children }: { children: React.ReactNod
           <Link href="/approvals" className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${pathname === "/approvals" ? "bg-blue-600/10 text-blue-400 border border-blue-500/20" : "text-gray-400 hover:text-white hover:bg-white/5"}`}>
             <span>📊</span> <span className="font-medium text-sm">Approvals List</span>
           </Link>
-          <Link href="/approvals/new" className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${pathname === "/approvals/new" ? "bg-blue-600/10 text-blue-400 border border-blue-500/20" : "text-gray-400 hover:text-white hover:bg-white/5"}`}>
+          {/* <Link href="/approvals/new" className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${pathname === "/approvals/new" ? "bg-blue-600/10 text-blue-400 border border-blue-500/20" : "text-gray-400 hover:text-white hover:bg-white/5"}`}>
             <span>➕</span> <span className="font-medium text-sm">New Request</span>
-          </Link>
+          </Link> */}
+
+          {/* ONLY show this to Teachers (or people who actually submit requests) */}
+          {session?.user?.role === "TEACHER" && (
+            <Link href="/approvals/new" className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${pathname === "/approvals/new" ? "bg-blue-600/10 text-blue-400 border border-blue-500/20" : "text-gray-400 hover:text-white hover:bg-white/5"}`}>
+              <span>➕</span> <span className="font-medium text-sm">New Request</span>
+            </Link>
+          )}
+
+          {/* Admin God Mode (Already perfect!) */}
+          {session?.user?.role === "ADMIN" && (
+            <Link href="/admin" className="flex items-center gap-2 px-4 py-3 text-purple-400 hover:text-purple-300 mt-4 pt-4 border-t border-white/10 transition-colors">
+              <span>⚙️</span> <span className="font-medium text-sm">Admin God Mode</span>
+            </Link>
+          )}
+
+
         </nav>
       </aside>
 

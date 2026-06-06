@@ -39,6 +39,13 @@ export function Navbar() {
               New Request
             </Link>
           )}
+
+          {user?.role === "ADMIN" && (
+            <Link href="/admin" className="text-sm font-medium text-[#c084fc] hover:text-white transition-colors">
+              Admin Console
+            </Link>
+          
+          )}
         </div>
       </div>
 

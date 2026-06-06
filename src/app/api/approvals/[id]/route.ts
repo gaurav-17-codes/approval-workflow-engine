@@ -347,6 +347,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { sendNotificationEmail } from "@/lib/mail";
 
 // 1. GET METHOD: Sends the request data to the frontend when the page loads
 export async function GET(req: Request, { params }: { params: { id: string } }) {
@@ -373,89 +374,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-// // 2. PATCH METHOD: Runs when the user clicks "Approve" or "Reject"
-// export async function PATCH(req: Request, { params }: { params: { id: string } }) {
-//   try {
-//     const session = await getServerSession(authOptions);
-//     if (!session?.user) {
-//       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
-//     }
 
-//     const user = session.user as any;
-//     const body = await req.json();
-//     const { action, comment } = body; // "APPROVE" or "REJECT"
-
-//     // Find the request and its steps
-//     const request = await prisma.approvalRequest.findUnique({
-//       where: { id: params.id },
-//       include: { steps: { orderBy: { stepOrder: "asc" } } }
-//     });
-
-//     if (!request) return NextResponse.json({ success: false, message: "Not found" }, { status: 404 });
-
-//     // Identify the currently active step
-//     const activeStep = request.steps.find((s) => s.status === "ACTIVE");
-//     if (!activeStep || activeStep.approverRole !== user.role) {
-//       return NextResponse.json({ success: false, message: "Not authorized to approve this step" }, { status: 403 });
-//     }
-
-//     // Update the current step
-//     const newStepStatus = action === "APPROVE" ? "APPROVED" : "REJECTED";
-//     await prisma.step.update({
-//       where: { id: activeStep.id },
-//       data: {
-//         status: newStepStatus,
-//         comment: comment || null,
-//         actionedById: user.id,
-//         actionedAt: new Date()
-//       }
-//     });
-
-//     // Advance the workflow logic
-//     if (action === "REJECT") {
-//       // If rejected, the whole request is immediately rejected
-//       await prisma.approvalRequest.update({
-//         where: { id: request.id },
-//         data: { status: "REJECTED" }
-//       });
-//     } else if (action === "APPROVE") {
-//       // If approved, check if there is a next step
-//       const nextStep = request.steps.find((s) => s.stepOrder === activeStep.stepOrder + 1);
-      
-//       if (nextStep) {
-//         // Activate the next person in line
-//         await prisma.step.update({
-//           where: { id: nextStep.id },
-//           data: { status: "ACTIVE" }
-//         });
-//       } else {
-//         // No more steps! The whole request is fully approved
-//         await prisma.approvalRequest.update({
-//           where: { id: request.id },
-//           data: { status: "APPROVED" }
-//         });
-//       }
-//     }
-
-//     // Fetch the fresh, updated data to send back to the UI
-//     const updatedRequest = await prisma.approvalRequest.findUnique({
-//       where: { id: params.id },
-//       include: {
-//         submittedBy: { select: { name: true, email: true } },
-//         steps: {
-//           orderBy: { stepOrder: "asc" },
-//           include: { actionedBy: { select: { name: true } } }
-//         }
-//       }
-//     });
-
-//     return NextResponse.json({ success: true, data: updatedRequest });
-
-//   } catch (error) {
-//     console.error("PATCH Error:", error);
-//     return NextResponse.json({ success: false, message: "Failed to process approval" }, { status: 500 });
-//   }
-// }
 
 
 // 2. PATCH METHOD: Runs when the user clicks "Approve" or "Reject"
@@ -536,6 +455,55 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
         }
       }
     });
+    // ─── NOTIFICATION ENGINE ─────────────────────────────────────────────
+    const submitterEmail = updatedRequest!.submittedBy.email;
+    const reqTitle = updatedRequest!.title;
+
+    if (action === "REJECT") {
+      // 1. Anyone Rejects -> Notify Submitter Immediately
+      sendNotificationEmail({
+        to: submitterEmail,
+        subject: `❌ Request Rejected: ${reqTitle}`,
+        html: `<p>Unfortunately, your request "<b>${reqTitle}</b>" has been rejected.</p>
+               <p>Comment: ${comment || 'No comment provided.'}</p>`
+      });
+    } else if (action === "APPROVE") {
+      
+      if (dbUser.role === "HOD") {
+        // 2a. HOD Approves -> Notify Submitter of progress
+        sendNotificationEmail({
+          to: submitterEmail,
+          subject: `⏳ Progress Update: HOD Approved`,
+          html: `<p>Your request "<b>${reqTitle}</b>" has been approved by the HOD and is now with the Principal.</p>`
+        });
+
+        // 2b. HOD Approves -> Notify Principal it's their turn
+        const principalUser = await prisma.user.findFirst({ where: { role: "PRINCIPAL" } });
+        if (principalUser) {
+          sendNotificationEmail({
+            to: principalUser.email,
+            subject: `🚨 Action Required: HOD Approved Request`,
+            html: `
+              <h3>Pending Principal Approval</h3>
+              <p>A request has passed HOD review and requires your final sign-off.</p>
+              <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/approvals/${updatedRequest!.id}">Click here to review</a>
+            `
+          });
+        }
+      } else if (dbUser.role === "PRINCIPAL") {
+        // 3. Principal Approves -> Notify Submitter of Final Approval
+        sendNotificationEmail({
+          to: submitterEmail,
+          subject: `✅ Request Fully Approved: ${reqTitle}`,
+          html: `<p>Congratulations! Your request "<b>${reqTitle}</b>" has been fully approved by the Principal.</p>`
+        });
+      }
+    }
+    // ──────────────────────────────────────────────────────────────────────
+// ... rest of your catch block
+
+
+
 
     return NextResponse.json({ success: true, data: updatedRequest });
 
