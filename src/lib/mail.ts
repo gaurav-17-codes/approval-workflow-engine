@@ -196,6 +196,13 @@ const transporter = nodemailer.createTransport({
 // ... the rest of your sendNotificationEmail function stays exactly the same
 
 // The central function we will call from our APIs
+
+interface EmailPayload {
+  to: string;
+  subject: string;
+  html?: string;
+  text?: string;
+}
 export async function sendNotificationEmail({ to, subject, html }: EmailPayload) {
   try {
     const info = await transporter.sendMail({
