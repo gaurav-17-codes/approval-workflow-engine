@@ -1,129 +1,62 @@
-// // import { PrismaClient, Role } from "@prisma/client"
-// // // import { PrismaClient, Role } from "../node_modules/.prisma/client/index.js"
-// // // import { PrismaClient, Role } from "../src/generated/prisma/index.js"
-// // import bcrypt from "bcryptjs"
+import { PrismaClient } from '@prisma/client'
+import bcrypt from 'bcryptjs'
 
-// // const prisma = new PrismaClient()
-
-
-
-
-
-// // async function main() {
-// //   console.log("Seeding database...")
-
-// //   const users = [
-// //     { name: "Alice Teacher",    email: "teacher@school.edu",   role: Role.TEACHER,   password: "teacher123" },
-// //     { name: "Bob HOD",          email: "hod@school.edu",       role: Role.HOD,        password: "hod123" },
-// //     { name: "Carol Principal",  email: "principal@school.edu", role: Role.PRINCIPAL,  password: "principal123" },
-// //     { name: "Dave Admin",       email: "admin@school.edu",     role: Role.ADMIN,      password: "admin123" },
-// //   ]
-
-// //   for (const u of users) {
-// //     const passwordHash = await bcrypt.hash(u.password, 10)
-// //     await prisma.user.upsert({
-// //       where:  { email: u.email },
-// //       update: {},
-// //       create: { name: u.name, email: u.email, passwordHash, role: u.role },
-// //     })
-// //     console.log(`  Created user: ${u.email} (${u.role})`)
-// //   }
-
-// //   console.log("Seeding complete.")
-// // }
-
-// // main()
-// //   .catch((e) => { console.error(e); process.exit(1) })
-// //   .finally(() => prisma.$disconnect())
-
-
-
-
-
-
-
-
-
-
-
-
-// import { PrismaClient, Role } from "@prisma/client"
-// import bcrypt from "bcryptjs"
-
-// const prisma = new PrismaClient()
-
-// async function main() {
-//   console.log("Seeding database...")
-
-//   const users = [
-//     { name: "Alice Teacher",    email: "teacher@school.edu",   role: Role.TEACHER,   password: "teacher123" },
-//     { name: "Bob HOD",          email: "hod@school.edu",       role: Role.HOD,        password: "hod123" },
-//     { name: "Carol Principal",  email: "principal@school.edu", role: Role.PRINCIPAL,  password: "principal123" },
-//     { name: "Dave Admin",       email: "admin@school.edu",     role: Role.ADMIN,      password: "admin123" },
-//   ]
-
-//   for (const u of users) {
-//     const passwordHash = await bcrypt.hash(u.password, 10)
-//     await prisma.user.upsert({
-//       where:  { email: u.email },
-//       update: {},
-//       create: { name: u.name, email: u.email, passwordHash, role: u.role },
-//     })
-//     console.log(`  Created user: ${u.email} (${u.role})`)
-//   }
-
-//   console.log("Seeding complete.")
-// }
-
-// main()
-//   .catch((e) => { console.error(e); process.exit(1) })
-//   .finally(() => prisma.$disconnect())
-
-
-
-
-
-
-import { PrismaClient, Role } from "../node_modules/.prisma/client/index.js"
-import { PrismaMariaDb } from "@prisma/adapter-mariadb"
-import bcrypt from "bcryptjs"
-import "dotenv/config"
-
-// 1. Configure the adapter directly for your local MySQL server
-const adapter = new PrismaMariaDb({
-  host: "localhost",
-  port: 3306,
-  user: "root",
-  password: "", // Homebrew default is blank
-  database: "approval_engine"
-})
-
-// 2. Initialize Prisma Client WITH the adapter (Strictly required in v7!)
-const prisma = new PrismaClient({ adapter })
+const prisma = new PrismaClient()
 
 async function main() {
-  console.log("Seeding database...")
+  await prisma.user.deleteMany({})
 
-const users = [
-    { name: "Gaurav",             email: "teacher@school.com",   role: Role.TEACHER,    password: "teacher123" },
-    { name: "Bob HOD",          email: "hod@school.com",       role: Role.HOD,        password: "hod123" },
-    { name: "Carol Principal",  email: "principal@school.com", role: Role.PRINCIPAL,  password: "principal123" },
-    { name: "Dave Admin",       email: "admin@school.com",     role: Role.ADMIN,      password: "admin123" },
-  ]
+  console.log('Generating secure unique hashes...')
 
-  for (const u of users) {
-    const passwordHash = await bcrypt.hash(u.password, 10)
-    await prisma.user.upsert({
-      where:  { email: u.email },
-      update: {},
-      create: { name: u.name, email: u.email, passwordHash, role: u.role },
-    })
-    console.log(`  Created user: ${u.email} (${u.role})`)
-  }
+  const teacherHash = await bcrypt.hash('TeacherSecure$2026', 10)
+  const hodHash = await bcrypt.hash('HodApproval#2026', 10)
+  const principalHash = await bcrypt.hash('PrincipalTop@2026', 10)
+  const adminHash = await bcrypt.hash('AdminMaster!2026', 10)
 
-  console.log("Seeding complete.")
+  const teacher = await prisma.user.create({
+    data: {
+      email: 'teacher@school.com',
+      passwordHash: teacherHash,
+      role: 'TEACHER',
+    },
+  })
+  console.log(`Created user: ${teacher.email}`)
+
+  const hod = await prisma.user.create({
+    data: {
+      email: 'hod@school.com',
+      passwordHash: hodHash,
+      role: 'HOD',
+    },
+  })
+  console.log(`Created user: ${hod.email}`)
+
+  const principal = await prisma.user.create({
+    data: {
+      email: 'principal@school.com',
+      passwordHash: principalHash,
+      role: 'PRINCIPAL',
+    },
+  })
+  console.log(`Created user: ${principal.email}`)
+
+  const admin = await prisma.user.create({
+    data: {
+      email: 'admin@school.com',
+      passwordHash: adminHash,
+      role: 'ADMIN',
+    },
+  })
+  console.log(`Created user: ${admin.email}`)
+
+  console.log('🌱 Seeding complete! Role-based security active.')
 }
 
 main()
-  .catch((e) => { console.error(e); process.exit(1) })
-  .finally(() => prisma.$disconnect())
+  .catch((e) => {
+    console.error(e)
+    process.exit(1)
+  })
+  .finally(async () => {
+    await prisma.$disconnect()
+  })
