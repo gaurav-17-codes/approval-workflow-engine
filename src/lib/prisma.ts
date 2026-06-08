@@ -31,14 +31,40 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 
-// 1. Configure the adapter with your explicit local credentials
-const adapter = new PrismaMariaDb({
-  host: "localhost",
-  port: 3306,
-  user: "root",
-  password: "", // Your local DB has no password
-  database: "approval_engine"
-});
+// 1. Configure the adapter using DATABASE_URL (preferred) or individual env vars
+const getDbConfig = () => {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (databaseUrl) {
+    try {
+      const parsed = new URL(databaseUrl);
+      const user = decodeURIComponent(parsed.username || "");
+      const password = decodeURIComponent(parsed.password || "");
+      const host = parsed.hostname || "localhost";
+      const port = parsed.port ? Number(parsed.port) : 3306;
+      const dbName = parsed.pathname ? parsed.pathname.replace(/^\//, "") : "approval_engine";
+      return {
+        host,
+        port,
+        user,
+        password,
+        database: dbName,
+      };
+    } catch (e) {
+      // fallthrough to env vars
+    }
+  }
+
+  return {
+    host: process.env.DB_HOST || "localhost",
+    port: Number(process.env.DB_PORT) || 3306,
+    user: process.env.DB_USER || "root",
+    password: process.env.DB_PASSWORD || "",
+    database: process.env.DB_NAME || "approval_engine",
+  };
+};
+
+const dbConfig = getDbConfig();
+const adapter = new PrismaMariaDb(dbConfig);
 
 // 2. Standard Next.js singleton pattern to prevent connection limits
 const prismaClientSingleton = () => {
