@@ -1,17 +1,26 @@
 "use client";
 
-import { signIn } from "next-auth/react";
-import { useState } from "react";
+import { signIn, useSession } from "next-auth/react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (status === "authenticated" && session?.user) {
+      router.push("/approvals");
+      router.refresh();
+    }
+  }, [status, session, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +46,18 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-4 relative z-10">
-      <div className="w-full max-w-md p-8 bg-white/[0.02] border border-white/10 rounded-2xl backdrop-blur-md shadow-2xl">
+      {/* Show loading while checking session status */}
+      {status === "loading" && (
+        <div className="w-full max-w-md p-8 bg-white/[0.02] border border-white/10 rounded-2xl backdrop-blur-md shadow-2xl">
+          <div className="text-center">
+            <p className="text-gray-400">Checking authentication...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Show login form only if not authenticated and not loading */}
+      {status === "unauthenticated" && (
+        <div className="w-full max-w-md p-8 bg-white/[0.02] border border-white/10 rounded-2xl backdrop-blur-md shadow-2xl">
         
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">Welcome Back</h1>
@@ -110,6 +130,7 @@ export default function LoginPage() {
           </Link>
         </div>
       </div>
+      )}
     </main>
   );
 }
