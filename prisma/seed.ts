@@ -1,7 +1,6 @@
 // Use the project's configured Prisma instance (includes MariaDB adapter)
 import prisma from "../src/lib/prisma";
 import bcrypt from "bcryptjs";
-import { randomBytes } from "crypto";
 import { writeFileSync } from "fs";
 
 async function main() {
@@ -12,17 +11,15 @@ async function main() {
   await prisma.approvalRequest.deleteMany();
   await prisma.user.deleteMany();
 
-  // Generate unique secure passwords per user (dev only)
-  const makePassword = (len = 16) => randomBytes(len).toString("base64").slice(0, len + 2);
-
+  // Keep seed passwords stable so demo accounts remain usable after reseeding.
   const plaintextPasswords: Record<string, string> = {
-    user_teacher_1: makePassword(),
-    user_teacher_2: makePassword(),
-    user_teacher_3: makePassword(),
-    user_hod_1: makePassword(),
-    user_hod_2: makePassword(),
-    user_principal_1: makePassword(),
-    user_admin_1: makePassword(),
+    user_teacher_1: "mndshg3/Xb7NbFF0LK",
+    user_teacher_2: "QwRCB4046JOrWn42Rc",
+    user_teacher_3: "0fehxz5J1Ym2gc4yvm",
+    user_hod_1: "TAWID7oRolvELRXss+",
+    user_hod_2: "3FZAJFeNWym27ytV9f",
+    user_principal_1: "3DFI9uIcmkpu0Z1/dM",
+    user_admin_1: "a6+/jY8fsD6QVIyb5g",
   };
 
   // Hash all generated passwords

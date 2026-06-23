@@ -2,13 +2,13 @@
 
 -- Insert Users
 INSERT INTO `User` (`id`, `name`, `email`, `passwordHash`, `role`, `createdAt`) VALUES
-('user_teacher_1', 'Rajesh Kumar', 'rajesh.kumar@school.edu', '$2b$10$dummyhash1', 'TEACHER', NOW()),
-('user_teacher_2', 'Priya Singh', 'priya.singh@school.edu', '$2b$10$dummyhash2', 'TEACHER', NOW()),
-('user_teacher_3', 'Amit Patel', 'amit.patel@school.edu', '$2b$10$dummyhash3', 'TEACHER', NOW()),
-('user_hod_1', 'Dr. Vikram Sharma', 'vikram.sharma@school.edu', '$2b$10$dummyhash4', 'HOD', NOW()),
-('user_hod_2', 'Ms. Neha Gupta', 'neha.gupta@school.edu', '$2b$10$dummyhash5', 'HOD', NOW()),
-('user_principal_1', 'Prof. Rajendra Nath', 'principal@school.edu', '$2b$10$dummyhash6', 'PRINCIPAL', NOW()),
-('user_admin_1', 'Admin User', 'admin@school.edu', '$2b$10$dummyhash7', 'ADMIN', NOW());
+('user_teacher_1', 'Rajesh Kumar', 'rajesh.kumar@school.edu', '$2a$10$TXaVCSeE5ZqTXh7S9uzZkO5FwTF9MlNqiDStwXeHUtUReXZVxa/ES', 'TEACHER', NOW()),
+('user_teacher_2', 'Priya Singh', 'priya.singh@school.edu', '$2a$10$uDwOkK/FI1y7rETx0bZ7zuUK3SfwIK2p039cpjE.xWBMap0ycCF.i', 'TEACHER', NOW()),
+('user_teacher_3', 'Amit Patel', 'amit.patel@school.edu', '$2a$10$QcmbxP4nKu3zc5hpYBaU/uFNQIkrerBNBMf0o.KxoT4mzoSrVmrIm', 'TEACHER', NOW()),
+('user_hod_1', 'Dr. Vikram Sharma', 'vikram.sharma@school.edu', '$2a$10$U3VeMUhd41x1tTzYlZSCr.T9DfePNfstiufl4ttFrS0eQZ6Gis4pG', 'HOD', NOW()),
+('user_hod_2', 'Ms. Neha Gupta', 'neha.gupta@school.edu', '$2a$10$btCJg8GP3ROz98jlwxKma.htxLZLhm2zgohA9kkhw4qV2v1Ql809a', 'HOD', NOW()),
+('user_principal_1', 'Prof. Rajendra Nath', 'principal@school.edu', '$2a$10$QyZtshQUDZhSsm1NTuaZh.hhjbN6NbrpvjOZFdC91g3HNfpeKNIC.', 'PRINCIPAL', NOW()),
+('user_admin_1', 'Admin User', 'admin@school.edu', '$2a$10$IRn.6ZmiWvGb5t41FV7Zl.NataXJleXdXG7qzg71zIHOa9VpHY1QC', 'ADMIN', NOW());
 
 -- Insert Approval Requests
 INSERT INTO `ApprovalRequest` (`id`, `title`, `category`, `description`, `priority`, `status`, `createdAt`, `updatedAt`, `submittedById`) VALUES
