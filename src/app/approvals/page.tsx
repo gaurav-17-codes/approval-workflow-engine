@@ -266,13 +266,14 @@ type RequestItem = {
   priority: string;
   status: string;
   createdAt: string;
-  submittedBy: { name: string; role: string };
+  submittedBy: { name: string; role?: string };
 };
 
 export default function ApprovalsListPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [requests, setRequests] = useState<RequestItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // --- FILTER STATES ---
   const [filterStatus, setFilterStatus] = useState("ALL");
@@ -280,19 +281,32 @@ export default function ApprovalsListPage() {
   const [filterCategory, setFilterCategory] = useState("ALL");
 
   useEffect(() => {
-    fetchRequests();
-  }, []);
+    if (status === "authenticated") {
+      fetchRequests();
+    } else if (status === "unauthenticated") {
+      setLoading(false);
+    }
+  }, [status]);
 
   async function fetchRequests() {
     try {
-      // Assuming you have an API route that fetches requests for the logged-in user
-      const res = await fetch("/api/approvals"); 
+      console.log("🔄 Fetching approvals from /api/approvals...");
+      const res = await fetch("/api/approvals");
+      console.log("📊 Response status:", res.status, res.statusText);
       const json = await res.json();
-      if (json.success) {
-        setRequests(json.data);
+      console.log("📦 Response data:", json);
+      
+      if (!res.ok || !json.success) {
+        const msg = json.message || "Unable to load approval requests.";
+        console.error("❌ API error:", msg);
+        setError(msg);
+      } else {
+        console.log("✅ Loaded", json.data?.length || 0, "requests");
+        setRequests(json.data || []);
       }
     } catch (error) {
-      console.error("Failed to load requests", error);
+      console.error("❌ Fetch failed:", error);
+      setError("Failed to load approval requests. Please refresh the page.");
     } finally {
       setLoading(false);
     }
@@ -308,12 +322,25 @@ export default function ApprovalsListPage() {
     return matchStatus && matchPriority && matchCategory;
   });
 
+  if (status === "loading") {
+    return <div className="text-gray-400 flex justify-center items-center h-64">Checking session...</div>;
+  }
+
+  if (!session && status === "unauthenticated") {
+    return <div className="text-red-400 text-center py-24">You must be logged in to view this page.</div>;
+  }
+
   if (loading) {
     return <div className="text-gray-400 flex justify-center items-center h-64">Loading requests...</div>;
   }
 
   return (
     <div className="space-y-6">
+      {error && (
+        <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200">
+          {error}
+        </div>
+      )}
       
       {/* 1. THE FILTER BAR (Glassmorphism UI) */}
       <div className="bg-transparent border border-[#673AB7] rounded-xl p-4 backdrop-blur-md flex flex-wrap gap-4 items-end shadow-lg shadow-[#673AB7]/5">

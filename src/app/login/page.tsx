@@ -16,31 +16,28 @@ export default function LoginPage() {
 
   // Redirect if already logged in
   useEffect(() => {
-    if (status === "authenticated" && session?.user) {
-      router.push("/approvals");
-      router.refresh();
+    if (status === "authenticated") {
+      router.replace("/approvals");
     }
-  }, [status, session, router]);
+  }, [status, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    // Call NextAuth Credentials provider
     const res = await signIn("credentials", {
       redirect: false,
       email,
       password,
+      callbackUrl: "/approvals",
     });
 
     if (res?.error) {
       setError("Invalid email or password");
       setLoading(false);
     } else {
-      // If successful, push them to the secure approvals list
-      router.push("/approvals");
-      router.refresh();
+      router.replace(res?.url || "/approvals");
     }
   };
 
